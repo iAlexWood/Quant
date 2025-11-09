@@ -129,9 +129,12 @@ $e\_c(b\_i^{c})$ 和 $e\_f(b\_i^{f})$。然后将这些嵌入拼接起来并通�
 ```math
 p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 ```
-**细粒度子词元预测。** 为了在方程 (4) 中建模条件依赖关系，上下文需要用预测的粗粒度子词元 $\widehat{b}_{t}^{c}$ 来更新。在训练期间，我们使用模型在上一步的自有预 $\widehat{b}\_{t}^{c}$ ，它是从预测分布 $p(b\_{t}^{c} | \mathbf{b}{< t})$ 中采样得到的，而不是使用真实的子词元（即 teacher-forcing）。我们发现这种采样策略通过减轻暴露偏差（exposure bias）来增强模型的鲁棒性，使训练分布与多步推理的自回归特性（即无法获取真实词元）更好地对齐。我们使用一个交叉注意力（cross-attention）机制，其中 $\widehat{b}\_{t}^{c}$ 的嵌入充当查询（query），而历史 $\mathbf{h}\_t$ 提供键（key）和值（value）。结果由第二个头 $W_f$ 投影：
+**细粒度子词元预测。** 为了在方程 (4) 中建模条件依赖关系，上下文需要用预测的粗粒度子词元 $\hat{b}\_{t}^{c}$ 来更新。在训练期间，我们使用模型在上一步的自有预 $\hat{b}\_{t}^{c}$ ，它是从预测分布 $p(b\_{t}^{c} | \mathbf{b}{\lt t})$ 中采样得到的，而不是使用真实的子词元（即 teacher-forcing）。我们发现这种采样策略通过减轻暴露偏差（exposure bias）来增强模型的鲁棒性，使训练分布与多步推理的自回归特性（即无法获取真实词元）更好地对齐。我们使用一个交叉注意力（cross-attention）机制，其中 $\widehat{b}\_{t}^{c}$ 的嵌入充当查询（query），而历史 $\mathbf{h}\_t$ 提供键（key）和值（value）。结果由第二个头 $W_f$ 投影：
 ```math
-\mathbf{h}^{\text{update}}_t = \text{CrossAttn}(q=e_c(\widehat{b}_{t}^{c}), k=v=\mathbf{h}_t) \\ p(b_{t}^{f} | \mathbf{b}_{\lt t}, b_{t}^{c}) = \text{softmax}(W_f \mathbf{h}^{\text{update}}_t) \kern{1cm} (7)
+\begin{align}
+\mathbf{h}^{\text{update}}_t = \text{CrossAttn}(q=e_c(\widehat{b}_{t}^{c}), k=v=\mathbf{h}_t) \\
+p(b_{t}^{f} \mid \mathbf{b}_{\lt t}, b_{t}^{c}) = \text{softmax}(W_f \mathbf{h}^{\text{update}}_t) \kern{1cm} (7)
+\end{align}
 ```
 总的训练目标 $\mathcal{L}\_{\text{ar}}$ 是数据的负对数似然，对两个预测步骤求和：
 ```math
@@ -147,17 +150,17 @@ p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 
 ---
 
-**表 1：Kronos 家族的模型配置。** 我们详细列出了 Transformer 层数、模型维度 (dmodel​)、前馈网络维度 (dff​)、注意力头数、词汇表大小（2k）以及总参数量。
+**表 1：Kronos 家族的模型配置。** 我们详细列出了 Transformer 层数、模型维度 ($d\_{model}$​)、前馈网络维度 ($d\_{ff​}$)、注意力头数、词汇表大小（ $2^k$ ）以及总参数量。
 
-|  | 层数 | dmodel​ | dff​ | 头数 | 词汇表 (2k) | 参数量 |
+|  | 层数 | $\mathbf{d}_{\text{model}}$ | $\mathbf{d}_{\text{ff}}$ | 头数 | 词汇表 ($2^k$) | 参数量 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Kronos$_{small}$ | 8 | 512 | 1024 | 8 | 20 | 24.7M |
-| Kronos$_{base}$ | 12 | 832 | 2048 | 16 | 20 | 102.3M |
-| Kronos$_{large}$ | 18 | 1664 | 3072 | 32 | 20 | 499.2M |
+| $\text{Kronos}\_{small}$ | 8 | 512 | 1024 | 8 | 20 | 24.7M |
+| $\text{Kronos}\_{base}$ | 12 | 832 | 2048 | 16 | 20 | 102.3M |
+| $\text{Kronos}\_{large}$ | 18 | 1664 | 3072 | 32 | 20 | 499.2M |
 
 ---
 
-**推理** 在推理时，我们以自回归方式生成未来的词元序列，类似于文本生成。这个过程的随机性通过标准技术如温度缩放（temperature scaling）和 top-$p$（nucleus）采样（Holtzman et al. 2019）来控制。从 logits $\mathbf{z}$  中采样词元 $i$ 的概率由 $p\_i \propto \exp(z\_i / T)$ 给出，其中 $T$ 是温度。对于需要高精度的任务，可以通过生成多个未来轨迹（即蒙特卡洛（Monte Carlo）推演）并对解码后的连续值进行平均，来产生更稳定的预测，从而提高预测准确性。正如我们的实验所示，这种方法一致地提高了预测质量。
+**推理** 在推理时，我们以自回归方式生成未来的词元序列，类似于文本生成。这个过程的随机性通过标准技术如温度缩放（temperature scaling）和 top- $p$ （nucleus）采样（Holtzman et al. 2019）来控制。从 logits $\mathbf{z}$  中采样词元 $i$ 的概率由 $p\_i \propto \exp(z\_i / T)$ 给出，其中 $T$ 是温度。对于需要高精度的任务，可以通过生成多个未来轨迹（即蒙特卡洛（Monte Carlo）推演）并对解码后的连续值进行平均，来产生更稳定的预测，从而提高预测准确性。正如我们的实验所示，这种方法一致地提高了预测质量。
 
 ## 4 实验
 
@@ -169,7 +172,7 @@ p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 
 为了进行严格的比较，我们将 Kronos 与一个包含 25 个基线模型的综合套件进行了基准测试。这些基线模型是精心挑选的，代表了四种不同范式的 SOTA 水平：非预训练的全样本（full-shot）模型（例如 iTransformer (Liu et al. 2023)）、零样本（zero-shot）时间序列基础模型（例如 TimeMOE (Xiaoming et al. 2025)）、计量经济学波动率模型（例如 GARCH (Bollerslev 1986)，来自计量经济学的经典波动率预测方法），以及生成式时间序列模型（例如 DiffusionTS (Yuan and Qiao 2024)）。任务细节和基线模型在附录 D 中。我们的主要实验结果概览见图 4，完整的结果分解在附录 F 中。
 
-![3e32abd55adccbfb8cd304cdf5d70d9d.png](en-resource://database/46299:0)
+<img width="5929" height="3513" alt="main_result" src="https://github.com/user-attachments/assets/73584688-9666-41ed-b20d-3bf90bfec212" />
 
 [图例] Kronos 全样本时间序列模型 零样本时间序列模型 计量经济学波动率模型 生成式时间序列模型
 
@@ -183,12 +186,11 @@ p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 
 **预测任务** 图 4(a-c) 展示了三个预测任务的结果。Kronos 在所有这些任务上都取得了一致的 SOTA 性能。特别地，对于价格序列预测，Kronos 在 RankIC 上相比最强的 TSFM 基线实现了惊人的 93% 提升，相比最佳的非预训练模型实现了 87% 的增益。此外，随着模型规模的扩大，在这些任务上的性能也持续提高，经验性地验证了时间序列基础模型的规模法则（Yao et al. 2024）。
 
-**生成任务** 遵循既定实践（Yoon, Jarrett, and Van der Schaar 2019），我们从三个角度评估合成数据的质量： $\textit{多样性}$ 、$\textit{保真度}$ 和 $\textit{有用性}$ 。
+**生成任务** 遵循既定实践（Yoon, Jarrett, and Van der Schaar 2019），我们从三个角度评估合成数据的质量： $\textit{多样性}$ 、 $\textit{保真度}$ 和 $\textit{有用性}$ 。
 
-为了评估$\textit{多样性}$——即生成样本覆盖真实数据分布的程度——我们使用了两种可视化方法：使用 t-SNE 将原始数据和合成数据投影到 2D 空间，以及通过核密度估计（KDE）比较它们的分布。如图 5 和附录 F 所示，t-SNE 图显示 Kronos 的合成数据更好地覆盖了原始数据空间，KDE 图也证实了其分布具有更高的相似性。
+为了评估 $\textit{多样性}$ ——即生成样本覆盖真实数据分布的程度——我们使用了两种可视化方法：使用 t-SNE 将原始数据和合成数据投影到 2D 空间，以及通过核密度估计（KDE）比较它们的分布。如图 5 和附录 F 所示，t-SNE 图显示 Kronos 的合成数据更好地覆盖了原始数据空间，KDE 图也证实了其分布具有更高的相似性。
 
-![4dd9683c95b3ca0d9c3d89c96d5a960b.png](en-resource://database/46301:0)
-
+<img width="2389" height="688" alt="gen_diversity_XTAI_15min" src="https://github.com/user-attachments/assets/d7c3220b-775f-47fb-abc0-587a1a82792c" />
 
 **图 5：上海证券交易所 15 分钟频率数据集上生成模型的视觉比较。** 顶行：原始数据（红色）与合成数据（蓝色）的 t-SNE 嵌入。底行：原始数据与合成数据的核密度估计（KDE）。
 
@@ -202,13 +204,13 @@ p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 
 我们进行了消融研究，以验证我们的核心设计选择，重点关注两个问题：(Q1) 我们的建模范式与其他替代方案相比的有效性，以及 (Q2) 词汇表大小的影响。附录 E 中提供了关于分词器的额外消融研究。
 
-**建模范式分析。** 为了解决 Q1，我们将 Kronos 与在预测空间和目标上有所不同、但参数量相当的变体进行了比较（表 2）。这些架构变体的详细描述在附录 D 中提供。我们测试了两个连续空间模型：$\textit{Direct-AR}$（使用 MSE 的标准回归基线）和 $\textit{Prob-AR}$ 。遵循既有工作（Yao et al. 2024），$\textit{Prob-AR}$ 使用Student-t 混合分布（Student-t mixture distribution）以更好地建模重尾数据分布。结果显示，我们的离散空间模型明显优于这些连续空间替代方案。我们还发现， $
-\textit{Kronos-Parallel}$ （一个并发预测子词元的变体）的表现不如我们的顺序方法，这证明了建模子词元依赖关系的重要性。这些发现验证了我们的离散、顺序建模框架是该领域更有效的方法。
+**建模范式分析。** 为了解决 Q1，我们将 Kronos 与在预测空间和目标上有所不同、但参数量相当的变体进行了比较（表 2）。这些架构变体的详细描述在附录 D 中提供。我们测试了两个连续空间模型： $\textit{Direct-AR}$ （使用 MSE 的标准回归基线）和 $\textit{Prob-AR}$ 。遵循既有工作（Yao et al. 2024）， $\textit{Prob-AR}$ 使用Student-t 混合分布（Student-t mixture distribution）以更好地建模重尾数据分布。结果显示，我们的离散空间模型明显优于这些连续空间替代方案。我们还发现， $\textit{Kronos-Parallel}$ （一个并发预测子词元的变体）的表现不如我们的顺序方法，这证明了建模子词元依赖关系的重要性。这些发现验证了我们的离散、顺序建模框架是该领域更有效的方法。
 
 ---
-![b0a23321466ec07b7f0083876edaba7f.png](en-resource://database/46305:0)
 
-**表 2：解剖 Kronos 架构选择的消融研究。** 我们将我们的模型与针对不同预测空间（连续 vs. 离散）和相应训练目标的变体进行比较。$\textit{Direct-AR}$ 作为标准回归基线。$\textit{Prob-AR}$ 评估了连续空间中概率建模的益处。$\textit{Kronos-Parallel}$ 对我们的顺序子词元设计进行了消融，它并发地预测子词元。最佳结果已加粗。
+<img width="854" height="258" alt="image" src="https://github.com/user-attachments/assets/2cd46ec8-e0ab-4594-88f7-5a462d27d06d" />
+
+**表 2：解剖 Kronos 架构选择的消融研究。** 我们将我们的模型与针对不同预测空间（连续 vs. 离散）和相应训练目标的变体进行比较。 $\textit{Direct-AR}$ 作为标准回归基线。 $\textit{Prob-AR}$ 评估了连续空间中概率建模的益处。 $\textit{Kronos-Parallel}$ 对我们的顺序子词元设计进行了消融，它并发地预测子词元。最佳结果已加粗。
 
 
 ---
@@ -217,9 +219,9 @@ p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 
 ---
 
-![09db70e3cb8d9b7f5d3a702169bd34b3.png](en-resource://database/46307:0)
+<img width="2020" height="1620" alt="model_performance_vs_vocab_size" src="https://github.com/user-attachments/assets/005bb1a8-8625-4e23-be45-182f82eebe1f" />
 
-**图 6：词汇表大小对模型性能的影响。** 我们绘制了随着词汇表大小（2k）增加，重构质量和下游预测性能的变化。
+**图 6：词汇表大小对模型性能的影响。** 我们绘制了随着词汇表大小（ $2^k$ ）增加，重构质量和下游预测性能的变化。
 
 ---
 
@@ -230,7 +232,8 @@ p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 图 7 展示了预测任务上的性能随采样数量变化的函数。结果表明，随着更多样本被纳入集成，IC 和 RankIC 均表现出一致的改善。对多个路径进行平均可以减轻生成过程中固有的随机性，并减少预测方差，从而产生更鲁棒和稳定的估计。这种能力提供了一种权衡，允许实践者在推理时的计算成本和期望的预测准确性水平之间进行平衡。
 
 ---
-![af796cb07464d7f2444a132058fd385a.png](en-resource://database/46309:0)
+
+<img width="1603" height="1399" alt="mc_sampling_performance" src="https://github.com/user-attachments/assets/db80a7f2-e3ff-4cb0-b2c6-3437f2b68e78" />
 
 **图 7：推理样本数量 (N) 对预测性能的影响。** 线条代表了 5 次不同随机种子运行的平均性能，阴影区域表示标准差。
 
