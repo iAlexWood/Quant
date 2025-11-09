@@ -40,20 +40,22 @@
 
 ## 2 准备工作
 
-令 $D$ 维向量 $\mathbf{x}_{t}\in\mathbb{R}^{D}$ 表示在离散时间 $t$ 的 K 线观测值，包含$D$个关键金融指标。在这项工作中，我们固定维度 $D=6$，以代表 OHLCVA 属性（开盘价、最高价、最低价、收盘价、成交量和成交额）。选择此输入的理由在附录 H (Q1) 中有详细说明。给定一个历史序列 $\mathbf{x}_{1:T}=(\mathbf{x}_{1},\mathbf{x}_{2},\ldots,\mathbf{x}_{T})$ ，我们的目标是预测接下来的 $H$ 个观测值 $\widehat{\mathbf{x}}_{T+1:T+H}=(\widehat{\mathbf{x}}_{T+1},\widehat{\mathbf{x}}_{T+2},\ldots,\widehat{\mathbf{x}}_{T+H})$ 。
+令 $D$ 维向量  $\mathbf x_t \in \mathbb{R}^{D}$  表示在离散时间 $t$ 的 K 线观测值，包含 $D$ 个关键金融指标。在这项工作中，我们固定维度 $D=6$ ，以代表 OHLCVA 属性（开盘价、最高价、最低价、收盘价、成交量和成交额）。选择此输入的理由在附录 H (Q1) 中有详细说明。给定一个历史序列 $\mathbf {x_{1:T}} =(\mathbf {x_1},\mathbf {x_2},\ldots,\mathbf {x_T})$ ，我们的目标是预测接下来的 $H$ 个观测值 $\widehat{\mathbf{x}}\_{T+1:T+H}=(\widehat{\mathbf{x}}\_{T+1},\widehat{\mathbf{x}}\_{T+2},\ldots,\widehat{\mathbf{x}}\_{T+H})$ 。
 
-Kronos 并不直接操作原始的连续输入，而是首先通过一个可学习的码本（codebook） $\mathcal{C}$ 将每个多变量观测值 $\mathbf{x}_{t}$ 量化为一个离散的词元 $b_{t}$ 。因此，原始序列 $\mathbf{x}_{1:T}=(\mathbf{x}_{1},\dots,\mathbf{x}_{T})$ 被映射为 $\mathbf{b}_{1:T}=(b_{1},\dots,b_{T})$ 。预测任务随后简化为一个自回归的词元序列建模问题：
+Kronos 并不直接操作原始的连续输入，而是首先通过一个可学习的码本（codebook） $\mathcal{C}$ 将每个多变量观测值 $\mathbf{x}\_{t}$ 量化为一个离散的词元 $b\_{t}$ 。因此，原始序列 $\mathbf{x}\_{1:T}=(\mathbf{x}\_{1},\dots,\mathbf{x}\_{T})$ 被映射为 $\mathbf{b}\_{1:T}=(b\_{1},\dots,b\_{T})$ 。预测任务随后简化为一个自回归的词元序列建模问题：
+
 ```math
 p(\mathbf{b}_{T+1:T+H} \mid \mathbf{b}_{1:T})= \prod_{h=1}^{H}p\left(b_{T+h}\mid\mathbf{b}_{1:T+h-1}\right)
 ```
+
 这种离散的表述方式具有内在的可扩展性，并且能自然地扩展到其他可以被构建为生成式框架的任务，例如合成数据生成和波动率预测。
 
 ## 3 方法论
 
-Kronos 将金融 K 线序列抽象为一种离散的语言，并通过一个如图 2 所示的两阶段框架来实现：(1) **K 线分词（Tokenization）**和 (2) **自回归预训练（Autoregressive Pre-training）**。
+Kronos 将金融 K 线序列抽象为一种离散的语言，并通过一个如图 2 所示的两阶段框架来实现：(1) **K 线分词（Tokenization）** 和 (2) **自回归预训练（Autoregressive Pre-training）** 。
 
+<img width="4748" height="2213" alt="Overview" src="https://github.com/user-attachments/assets/fa2ba616-f8f6-4b79-b683-f7868cee79d6" />
 
-![6d7dd7ddf97e20d5589323bf09c50679.png](en-resource://database/46265:1)
 
 ---
 
@@ -67,19 +69,19 @@ Kronos 将金融 K 线序列抽象为一种离散的语言，并通过一个如�
 
 ### K-line Tokenization
 
-Kronos 的第一阶段是将一个连续的、$D$ 维 K 线序列 $\mathbf{x} = (\mathbf{x}_{1}, \ldots, \mathbf{x}_{T})$（其中 $\mathbf{x}_{t}\in\mathbb{R}^{D}$ 编码了 OHLCVA 指标）转换为一个相应的离散词元序列。这是通过一个基于 Transformer 的自动编码器（图 3）实现的，该编码器由一个编码器 $E_{\text{enc}}$、一个量化器 $Q$ 和一个解码器 $E_{\text{dec}}$ 组成。
+Kronos 的第一阶段是将一个连续的、$D$ 维 K 线序列 $\mathbf{x} = (\mathbf{x}\_{1}, \ldots, \mathbf{x}\_{T})$（其中 $\mathbf{x}\_{t}\in\mathbb{R}^{D}$ 编码了 OHLCVA 指标）转换为一个相应的离散词元序列。这是通过一个基于 Transformer 的自动编码器（图 3）实现的，该编码器由一个编码器 $E\_{\text{enc}}$、一个量化器 $Q$ 和一个解码器 $E\_{\text{dec}}$ 组成。
 
-![212a274fea02b4821ca23a6dc83d363d.png](en-resource://database/46267:1)
----
+<img width="3128" height="2536" alt="Tokenizer" src="https://github.com/user-attachments/assets/9283385d-4d9d-4078-b4a5-20aa8f26882d" />
+
 
 **图 3：K 线分词器（K-line Tokenizer）的架构。** 它采用了一个基于 Transformer 的自动编码器，带有一个二元球面量化（BSQ）层。
 
 ---
 
-从生成模型中视频量化方法（Van Den Oord, Vinyals et al. 2017; Yu et al. 2023）中汲取灵感，我们调整了二元球面量化（Binary Spherical Quantization, BSQ）（Zhao, Xiong, and Krähenbühl 2024）—— 一种无查找量化（Look-up Free Quantization, LFQ）（Yu et al. 2023）的变体 —— 来完成此任务。我们在附录 H (Q2) 中讨论了这一选择的理由。BSQ 通过将连续的潜在向量 $\bm{\xi}_t$ 投影到一组可学习的超平面上，将其量化为一个 $k$ 比特的二元编码 $b_t \in \{-1,1\}^k$ 。
+从生成模型中视频量化方法（Van Den Oord, Vinyals et al. 2017; Yu et al. 2023）中汲取灵感，我们调整了二元球面量化（Binary Spherical Quantization, BSQ）（Zhao, Xiong, and Krähenbühl 2024）—— 一种无查找量化（Look-up Free Quantization, LFQ）（Yu et al. 2023）的变体 —— 来完成此任务。我们在附录 H (Q2) 中讨论了这一选择的理由。BSQ 通过将连续的潜在向量 $\boldsymbol{\xi}\_t$ 投影到一组可学习的超平面上，将其量化为一个 $k$ 比特的二元编码 $b\_t \in \{-1,1\}^k$ 。
 
 虽然大量的比特 $k$（例如 $k=20$）对于捕捉丰富的金融模式是可取的，但这会导致 $2^k$ 这样指数级大小的词汇表，这给后续的自回归模型在计算成本和参数大小方面带来了重大挑战。为了缓解这个问题，我们遵循了近期在视频量化和生成方面的工作（Yu et al. 2023; Wang et al. 2025），并将 $k$ 比特的编码分解到 $n$ 个子空间中。基于附录 H (Q3) 中详述的参数节省和延迟成本之间的权衡，我们设定 
-$n=2$。我们将编码划分为一个粗粒度子词元 $b_{t}^{c}$ 和一个细粒度子词元 $b_{t}^{f}$ ，两者具有相同的比特长度 $k_c = k_f = k/2$ ，其中 $k=k_c+k_f$ 。最终的编码 $b_t$ 是这两个子词元的拼接：
+$n=2$。我们将编码划分为一个粗粒度子词元 $b\_{t}^{c}$ 和一个细粒度子词元 $b\_{t}^{f}$ ，两者具有相同的比特长度 $k\_c = k\_f = k/2$ ，其中 $k=k\_c+k\_f$ 。最终的编码 $b\_t$ 是这两个子词元的拼接：
 ```math
 b_{t} = \bigl[b_{t}^{c},\,b_{t}^{f}\bigr]，\left(b_{t}^{c}, b_{t}^{f} \in\{-1,1\}^{k/2}\right)
 ```
@@ -91,49 +93,49 @@ b_{t} = \bigl[b_{t}^{c},\,b_{t}^{f}\bigr]，\left(b_{t}^{c}, b_{t}^{f} \in\{-1,1
 ```
 其中 $\lambda$ 是一个平衡超参数。各组件定义如下：
 
--  $\mathcal{L}_{\text{coarse}} = \mathbb{E}\bigl[\|\mathbf{x} - E_{\text{dec}}(\mathbf{b}^{c})\|^{2}\bigr]$ ，它训练粗粒度子词元 $\mathbf{b}^{c}$ 以形成低保真度的重构。
+-  $\mathcal{L}\_{\text{coarse}} = \mathbb{E}\bigl[\|\mathbf{x} - E_{\text{dec}}(\mathbf{b}^{c})\|^{2}\bigr]$ ，它训练粗粒度子词元 $\mathbf{b}^{c}$ 以形成低保真度的重构。
     
--  $\mathcal{L}_{\text{fine}} = \mathbb{E}\bigl[\|\mathbf{x} - E_{\text{dec}}(\mathbf{b})\|^{2}\bigr]$ ，它评估使用完整词元 $\mathbf{b}$ 的高保真度重构。
+-  $\mathcal{L}\_{\text{fine}} = \mathbb{E}\bigl[\|\mathbf{x} - E_{\text{dec}}(\mathbf{b})\|^{2}\bigr]$ ，它评估使用完整词元 $\mathbf{b}$ 的高保真度重构。
     
--  $\mathcal{L}_{\text{quant}}$ 是来自 BSQ 的量化损失（Zhao, Xiong, and Krähenbühl 2024），用于规范学习过程。它惩罚连续潜在向量 $\bm{\xi}$ 与其二元编码 $\mathbf{b}$, 之间的 L2 距离，使编码器的输出与学习到的码本对齐，以确保训练的稳定性。
+-  $\mathcal{L}\_{\text{quant}}$ 是来自 BSQ 的量化损失（Zhao, Xiong, and Krähenbühl 2024），用于规范学习过程。它惩罚连续潜在向量 $\boldsymbol{\xi}$ 与其二元编码 $\mathbf{b}$, 之间的 L2 距离，使编码器的输出与学习到的码本对齐，以确保训练的稳定性。
     
 
-这种层次化重构目标是我们设计的核心。通过优化 $\mathcal{L}_{\text{coarse}}$，粗粒度子词元 $\mathbf{b}^{c}$ 学习捕捉输入的主要结构。因此，在优化 $\mathcal{L}_{\text{fine}}$ 期间，细粒度子词元 $\mathbf{b}^f$ 被引导去编码完善粗略近似所需的残差信息。先前的工作表明，从粗到细的解码顺序可以提高生成质量（Wang et al. 2025）。我们的方法不是去识别那些固有包含粗略信息的词元并优先解码它们，而是在量化期间就被设计为将这种层次结构显式地强加到词元中。这确保了第一个子词元始终代表粗粒度信息，为后续的自回归建模阶段建立了期望的条件依赖关系。
+这种层次化重构目标是我们设计的核心。通过优化 $\mathcal{L}\_{\text{coarse}}$，粗粒度子词元 $\mathbf{b}^{c}$ 学习捕捉输入的主要结构。因此，在优化 $\mathcal{L}\_{\text{fine}}$ 期间，细粒度子词元 $\mathbf{b}^f$ 被引导去编码完善粗略近似所需的残差信息。先前的工作表明，从粗到细的解码顺序可以提高生成质量（Wang et al. 2025）。我们的方法不是去识别那些固有包含粗略信息的词元并优先解码它们，而是在量化期间就被设计为将这种层次结构显式地强加到词元中。这确保了第一个子词元始终代表粗粒度信息，为后续的自回归建模阶段建立了期望的条件依赖关系。
 
 
 
 ### 层次化自回归建模
 
-在分词阶段之后，得到的离散序列使用一个仅解码器的 Transformer（表示为 $E_{\text{ar}}$ ）进行建模，该模型采用因果注意力（causal-attention）机制，以确保每个时间步的预测仅依赖于历史上下文。主要目标是估计词元序列 $\mathbf{b} = \{b_1, \dots, b_T\}$ 上的联合分布。方程 1 的一个简化形式可以推导为：
+在分词阶段之后，得到的离散序列使用一个仅解码器的 Transformer（表示为 $E\_{\text{ar}}$ ）进行建模，该模型采用因果注意力（causal-attention）机制，以确保每个时间步的预测仅依赖于历史上下文。主要目标是估计词元序列 $\mathbf{b} = \{b\_1, \dots, b\_T\}$ 上的联合分布。方程 1 的一个简化形式可以推导为：
 ```math
-p(\mathbf{b}) = \prod_{t=1}^{T} p(b_t | \mathbf{b}_{<t}), \quad(3)
+p(\mathbf{b}) = \prod_{t=1}^{T} p(b_t \mid \mathbf{b}_{\lt t}), \quad(3)
 ```
- 其中 $\mathbf{b}_{<t}$ 表示直到时间 $t-1$ 的所有先前词元。 鉴于我们的层次化词元设计，其中每个词元被构造为 $b_t = [b_t^{c}, b_t^{f}]$，我们使用链式法则进一步分解这个条件概率，以显式地捕捉固有的从粗到细的依赖关系： 
+ 其中 $\mathbf{b}\_{<t}$ 表示直到时间 $t-1$ 的所有先前词元。 鉴于我们的层次化词元设计，其中每个词元被构造为 $b\_t = [b_t^{c}, b_t^{f}]$，我们使用链式法则进一步分解这个条件概率，以显式地捕捉固有的从粗到细的依赖关系： 
  ```math
-p(b_t | \mathbf{b}_{<t}) = p(b_t^{c} | \mathbf{b}_{<t}) \cdot p(b_t^{f} | \mathbf{b}_{<t}, b_t^{c}) \quad (4)
+p(b_t | \mathbf{b}_{\lt t}) = p(b_t^{c} | \mathbf{b}_{\lt t}) \cdot p(b_t^{f} | \mathbf{b}_{\lt t}, b_t^{c}) \quad (4)
 ```
 这种表述允许模型首先预测粗粒度子词元，该子词元作为脚手架，用于随后生成细粒度的残差子词元。因此，预训练目标简化为在这种层次分解下最大化观测序列的对数似然。
 
-如图 2（右）所示，自回归过程首先为每个时间步构建一个统一的输入向量。具体来说，在时间 $i$，子词元 $b_i^{c}$ 和 $b_i^{f}$ 使用两个不同的嵌入层被独立地投影到向量表征中，分别产生表征 
-$e_c(b_i^{c})$ 和 $e_f(b_i^{f})$。然后将这些嵌入拼接起来并通过线性投影，以产生一个融合的输入向量： 
+如图 2（右）所示，自回归过程首先为每个时间步构建一个统一的输入向量。具体来说，在时间 $i$，子词元 $b\_i^{c}$ 和 $b\_i^{f}$ 使用两个不同的嵌入层被独立地投影到向量表征中，分别产生表征 
+$e\_c(b\_i^{c})$ 和 $e\_f(b\_i^{f})$。然后将这些嵌入拼接起来并通过线性投影，以产生一个融合的输入向量： 
 ```math
 \mathbf{v}_i = W_{\text{fuse}}([e_c(b_i^{c}); e_f(b_i^{f})]) \quad (5)
 ```
-其中 $[\cdot;\cdot]$ 表示拼接，$W_{\text{fuse}}$ 是一个可学习的权重矩阵，负责将组合后的表征投影到模型的潜在空间中。
+其中 $[\cdot;\cdot]$ 表示拼接， $W\_{\text{fuse}}$ 是一个可学习的权重矩阵，负责将组合后的表征投影到模型的潜在空间中。
 
-然后，融合输入的序列 $\{\mathbf{v}_1, \dots, \mathbf{v}_{t-1}\}$ 由 Transformer $E_{\text{ar}}$ 处理，该 Transformer 输出上下文相关的隐藏状态。处理 $\mathbf{b}_{< t}$ 后的最终隐藏状态（表示为 $\mathbf{h}_t$）随后用于预测词元 $b_t$。这个隐藏状态接着为下一步的粗粒度和细粒度子词元的自回归预测提供信息，从而使模型能够有效地捕捉数据中固有的多尺度时间依赖关系。
+然后，融合输入的序列 $\{\mathbf{v}\_1, \dots, \mathbf{v}\_{t-1}\}$ 由 Transformer $E\_{\text{ar}}$ 处理，该 Transformer 输出上下文相关的隐藏状态。处理 $\mathbf{b}\_{< t}$ 后的最终隐藏状态（表示为 $\mathbf{h}\_t$）随后用于预测词元 $b\_t$。这个隐藏状态接着为下一步的粗粒度和细粒度子词元的自回归预测提供信息，从而使模型能够有效地捕捉数据中固有的多尺度时间依赖关系。
 
-**粗粒度子词元预测。** 历史向量 $\mathbf{h}_t$ 由一个线性头 $W_c$ 投影，以产生第一个子词元分布的 logits： 
+**粗粒度子词元预测。** 历史向量 $\mathbf{h}_t$ 由一个线性头 $W\_c$ 投影，以产生第一个子词元分布的 logits： 
 ```math
 p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 ```
-**细粒度子词元预测。** 为了在方程 (4) 中建模条件依赖关系，上下文需要用预测的粗粒度子词元 $\widehat{b}_{t}^{c}$ 来更新。在训练期间，我们使用模型在上一步的自有预 $\widehat{b}_{t}^{c}$ ，它是从预测分布 $p(b_{t}^{c} | \mathbf{b}{< t})$ 中采样得到的，而不是使用真实的子词元（即 teacher-forcing）。我们发现这种采样策略通过减轻暴露偏差（exposure bias）来增强模型的鲁棒性，使训练分布与多步推理的自回归特性（即无法获取真实词元）更好地对齐。我们使用一个交叉注意力（cross-attention）机制，其中 $\widehat{b}_{t}^{c}$ 的嵌入充当查询（query），而历史 $\mathbf{h}_t$ 提供键（key）和值（value）。结果由第二个头 $W_f$ 投影：
+**细粒度子词元预测。** 为了在方程 (4) 中建模条件依赖关系，上下文需要用预测的粗粒度子词元 $\widehat{b}_{t}^{c}$ 来更新。在训练期间，我们使用模型在上一步的自有预 $\widehat{b}\_{t}^{c}$ ，它是从预测分布 $p(b\_{t}^{c} | \mathbf{b}{< t})$ 中采样得到的，而不是使用真实的子词元（即 teacher-forcing）。我们发现这种采样策略通过减轻暴露偏差（exposure bias）来增强模型的鲁棒性，使训练分布与多步推理的自回归特性（即无法获取真实词元）更好地对齐。我们使用一个交叉注意力（cross-attention）机制，其中 $\widehat{b}\_{t}^{c}$ 的嵌入充当查询（query），而历史 $\mathbf{h}\_t$ 提供键（key）和值（value）。结果由第二个头 $W_f$ 投影：
 ```math
-\mathbf{h}^{\text{update}}_t = \text{CrossAttn}(q=e_c(\widehat{b}_{t}^{c}), k=v=\mathbf{h}_t) \\ p(b_{t}^{f} | \mathbf{b}_{< t}, b_{t}^{c}) = \text{softmax}(W_f \mathbf{h}^{\text{update}}_t) \kern{1cm} (7)
+\mathbf{h}^{\text{update}}_t = \text{CrossAttn}(q=e_c(\widehat{b}_{t}^{c}), k=v=\mathbf{h}_t) \\ p(b_{t}^{f} | \mathbf{b}_{\lt t}, b_{t}^{c}) = \text{softmax}(W_f \mathbf{h}^{\text{update}}_t) \kern{1cm} (7)
 ```
-总的训练目标 $\mathcal{L}_{\text{ar}}$ 是数据的负对数似然，对两个预测步骤求和：
+总的训练目标 $\mathcal{L}\_{\text{ar}}$ 是数据的负对数似然，对两个预测步骤求和：
 ```math
-\mathcal{L}_{\text{ar}} = - \mathbb{E}_{\mathbf{b} \sim \mathcal{D}} \sum_{t=1}^{T} \left[ \log p(b_t^{c} | \mathbf{b}_{<t}) + \log p(b_t^{f} | \mathbf{b}_{<t}, b_t^{c}) \right] \quad (8)
+\mathcal{L}_{\text{ar}} = - \mathbb{E}_{\mathbf{b} \sim \mathcal{D}} \sum_{t=1}^{T} \left[ \log p(b_t^{c} | \mathbf{b}_{\lt t}) + \log p(b_t^{f} | \mathbf{b}_{\lt t}, b_t^{c}) \right] \quad (8)
 ```
 其中 $\mathcal{D}$ 代表数据分布。
 
@@ -155,7 +157,7 @@ p(b_{t}^{c} | \mathbf{b}_{< t}) = \text{softmax}(W_c \mathbf{h}_t) \quad (6)
 
 ---
 
-**推理** 在推理时，我们以自回归方式生成未来的词元序列，类似于文本生成。这个过程的随机性通过标准技术如温度缩放（temperature scaling）和 top-$p$（nucleus）采样（Holtzman et al. 2019）来控制。从 logits $\mathbf{z}$  中采样词元 $i$ 的概率由 $p_i \propto \exp(z_i / T)$ 给出，其中 $T$ 是温度。对于需要高精度的任务，可以通过生成多个未来轨迹（即蒙特卡洛（Monte Carlo）推演）并对解码后的连续值进行平均，来产生更稳定的预测，从而提高预测准确性。正如我们的实验所示，这种方法一致地提高了预测质量。
+**推理** 在推理时，我们以自回归方式生成未来的词元序列，类似于文本生成。这个过程的随机性通过标准技术如温度缩放（temperature scaling）和 top-$p$（nucleus）采样（Holtzman et al. 2019）来控制。从 logits $\mathbf{z}$  中采样词元 $i$ 的概率由 $p\_i \propto \exp(z\_i / T)$ 给出，其中 $T$ 是温度。对于需要高精度的任务，可以通过生成多个未来轨迹（即蒙特卡洛（Monte Carlo）推演）并对解码后的连续值进行平均，来产生更稳定的预测，从而提高预测准确性。正如我们的实验所示，这种方法一致地提高了预测质量。
 
 ## 4 实验
 
